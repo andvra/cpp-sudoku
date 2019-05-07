@@ -1,29 +1,36 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <thread>
+#include <chrono>
 
 using  namespace std;
 
+int noAvailableThreads=8;
+vector<thread> threads;
+string solution;
+
 class Board
 {
-    char board[81];
-    vector<string> possibleGridFills[9];
+    string board;
+    vector<vector<string>> possibleGridFills;
 public:
     Board(string s)
     {
-        if(s.length()!=81) {
+
+    	    if(s.length()!=81) {
             cout << "Wrong string length! Must be 81\n";
         }
-        for(int i=0; i<81; i++)
-            board[i]=s.c_str()[i];
+	board=s;
         Init(s);
+
     }
 
     ~Board()
     {
     }
 
-    bool IsValid(string s, int row, int col)
+    static bool IsValid(string s, int row, int col)
     {
         for(int i=0; i<3; i++)
         {
@@ -55,7 +62,7 @@ public:
 
     }
 
-    string BoardStringToString(const char* data)
+    string BoardStringToString(const string& data)
     {
         string s = "";
 
@@ -73,7 +80,7 @@ public:
     {
         return BoardStringToString(Data());
     }
-    void Asd(string s, int row, int col, char tryNumber, vector<char> tryNumbers, vector<string>& possibleGrids)
+    void CreateGrids(string s, int row, int col, char tryNumber, vector<char> tryNumbers, vector<string>& possibleGrids)
     {
         for(int x=0; x<3; x++)
         {
@@ -101,7 +108,7 @@ public:
                         {
                             char nextTryNumber=tryNumbers[tryNumbers.size()-1];
                             tryNumbers.pop_back();
-                            Asd(s,row,col,nextTryNumber,tryNumbers, possibleGrids);
+                            CreateGrids(s,row,col,nextTryNumber,tryNumbers, possibleGrids);
                             tryNumbers.push_back(nextTryNumber);
                         }
                     }
@@ -117,7 +124,7 @@ public:
         int gridRow=gridID/3;
         int gridColumn=gridID%3;
         vector<char> tryNumbers= {'1','2','3','4','5','6','7','8','9'};
-        for(int i=0; i<3; i++)
+	for(int i=0; i<3; i++)
         {
             for(int j=0; j<3; j++)
             {
@@ -131,26 +138,27 @@ public:
 
         char first=tryNumbers[tryNumbers.size()-1];
         tryNumbers.pop_back();
-        Asd(s,gridRow,gridColumn,first,tryNumbers,grids);
+        CreateGrids(s,gridRow,gridColumn,first,tryNumbers,grids);
         cout << "Number of grids: " << grids.size() << '\n';
         return grids;
     }
 
     void Init(string s)
     {
-        for(int i=0; i<9; i++)
+    
+	for(int i=0; i<9; i++)
         {
             vector<string> possibleGrids = GeneratePossibleGrids(s,i);
-            possibleGridFills[i]=possibleGrids;
-        }
+	    possibleGridFills.push_back(possibleGrids);
+	}
     }
 
-    const char* Data()
+    const string Data()
     {
         return board;
     }
 
-    void PushGrid(string& s, int row, int col, string grid)
+    static void PushGrid(string& s, int row, int col, string grid)
     {
         for(int x=0; x<3; x++)
         {
@@ -162,55 +170,64 @@ public:
         }
     }
 
-    void PopGrid(string& s, int row, int col)
+    static void PopGrid(const string& originalBoard,string& s, int row, int col)
     {
         for(int x=0; x<3; x++)
         {
             for(int y=0; y<3; y++)
             {
                 int idx = col*3+x+row*27+9*y;
-                s[idx]=board[idx];
+                s[idx]=originalBoard[idx];
             }
         }
     }
 
-    string BuildBoard(string s, int row, int col)
+
+    
+    static void BuildBoard(const string& originalBoard, string s, int row, int col, const vector<vector<string>> gridFills,int threadStartRow,int threadStartCol)
     {
-	   unsigned int noPossibleGrids=possibleGridFills[row*3+col].size();
-	   unsigned int oneTenth=noPossibleGrids/100;
+	   unsigned int noPossibleGrids=gridFills[row*3+col].size();
         for(int i=0; i<noPossibleGrids; i++)
         {
 		if(row==0&&col==0)
-		cout << "Now running " << i << " at the top level\n";
-            //if(row==0 && col==0 && (i%oneTenth)==0)
-	//	    cout << "Now running grid " << i << " out of " << noPossibleGrids << " at the top level\n";
-		PushGrid(s,row,col,possibleGridFills[row*3+col][i]);
+			cout << "Now running " << i << " at the top level\n";
+		PushGrid(s,row,col,gridFills[row*3+col][i]);
             if(IsValid(s,row,col))
             {
                 if(col==2 && row==2)
                 {
-                    return BoardStringToString(s.c_str());
+			solution="DONE! THIS TEXT SHOULD BE THE BOARD REPRESENTATION";
+			//solution=BoardStringToString(s.c_str());
+			return;
                 }
                 else
                 {   
-			string ret =BuildBoard(s,row+(col==2),(col+1)%3);
-			if (ret!="")
-				return ret;
+			if(noAvailableThreads>0)
+			{
+				std::thread t(BuildBoard,originalBoard, s,row+(col==2),(col+1)%3,gridFills,row+(col==2),(col+1)%3);
+				t.detach();
+				noAvailableThreads--;
+			}
+			else
+				BuildBoard(originalBoard,s,row+(col==2),(col+1)%3,gridFills,threadStartRow,threadStartCol);
                 }
             }
-            PopGrid(s,row,col);
+            PopGrid(originalBoard, s,row,col);
         }
-	return "";
+	// Increase thread counter when we return (since this concludes the usage of the thread)
+	if(col==threadStartCol && row==threadStartRow)
+		noAvailableThreads++;
     }
 
     void PrintSolution()
     {
         string s = board;
-        string ret = BuildBoard(s,0,0);
-	if(ret=="")
-		cout << "No solution found\n";
-	else
-		cout << ret << "\n";
+	auto t_start=chrono::high_resolution_clock::now();
+	std::thread mainThread(BuildBoard,s.c_str(),s,0,0,possibleGridFills,0,0);
+	noAvailableThreads--;
+	mainThread.join();
+	auto t_end=chrono::high_resolution_clock::now();
+	cout << std::chrono::duration<double, std::milli>(t_end-t_start).count() << " ms\n";
     }
 };
 
