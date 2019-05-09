@@ -1,8 +1,9 @@
+#include <algorithm>
 #include "board.h"
 
 using namespace std;
 
-Board::Board(string s)
+Board::Board(string s, ThreadPool* tp)
 {
 
     if (s.length() != 81)
@@ -11,6 +12,8 @@ Board::Board(string s)
     }
     board = s;
     Init(s);
+    threadPool = tp;
+    mutexSolved.lock();
 }
 
 Board::~Board()
@@ -48,6 +51,20 @@ bool Board::IsValid(string s, int row, int col)
     return true;
 }
 
+void Board::SetSolved(string sol)
+{
+	solution=sol;
+	mutexSolved.unlock();
+}
+
+string Board::GetSolution()
+{
+	string ret;
+	mutexSolved.lock();
+	ret=solution;
+	mutexSolved.unlock();
+	return ret;
+}
 string Board::BoardStringToString(const string &data)
 {
     string s = "";
@@ -170,7 +187,7 @@ void Board::PopGrid(const string &originalBoard, string &s, int row, int col)
     }
 }
 
-void Board::BuildBoard(const string &originalBoard, string s, int row, int col, const vector<vector<string>> gridFills, int threadStartRow, int threadStartCol)
+void Board::BuildBoard(const string &originalBoard, string s, int row, int col, const vector<vector<string>> gridFills, int threadID, ThreadPool* tp)
 {
     unsigned int noPossibleGrids = gridFills[row * 3 + col].size();
     for (int i = 0; i < noPossibleGrids; i++)
@@ -181,37 +198,34 @@ void Board::BuildBoard(const string &originalBoard, string s, int row, int col, 
         if (IsValid(s, row, col))
         {
             if (col == 2 && row == 2)
-            {
-                solution = "DONE! THIS TEXT SHOULD BE THE BOARD REPRESENTATION";
+           {
+		   string s="";
+		    SetSolved(s);
                 //solution=BoardStringToString(s.c_str());
                 return;
             }
             else
             {
-                if (noAvailableThreads > 0)
+		    auto id = tp->GetID();
+                if (id > 0)
                 {
-                    std::thread t(BuildBoard, originalBoard, s, row + (col == 2), (col + 1) % 3, gridFills, row + (col == 2), (col + 1) % 3);
+                    std::thread t(BuildBoard, originalBoard, s, row + (col == 2), (col + 1) % 3, gridFills, id, tp);
                     t.detach();
-                    noAvailableThreads--;
                 }
                 else
-                    BuildBoard(originalBoard, s, row + (col == 2), (col + 1) % 3, gridFills, threadStartRow, threadStartCol);
+                    BuildBoard(originalBoard, s, row + (col == 2), (col + 1) % 3, gridFills, 0, tp);
             }
         }
         PopGrid(originalBoard, s, row, col);
     }
     // Increase thread counter when we return (since this concludes the usage of the thread)
-    if (col == threadStartCol && row == threadStartRow)
-        noAvailableThreads++;
+    if(threadID>0)
+	tp->Release(threadID);
 }
 
 void Board::PrintSolution()
 {
     string s = board;
-    auto t_start = chrono::high_resolution_clock::now();
-    std::thread mainThread(BuildBoard, s.c_str(), s, 0, 0, possibleGridFills, 0, 0);
-    noAvailableThreads--;
+    std::thread mainThread(BuildBoard, s, s, 0, 0, possibleGridFills, 0, threadPool);
     mainThread.join();
-    auto t_end = chrono::high_resolution_clock::now();
-    cout << std::chrono::duration<double, std::milli>(t_end - t_start).count() << " ms\n";
 }

@@ -6,3 +6,8 @@ In the solution described below, the board is then treated as 3x3 grids.
 1. Read the board to solve
 2. Starting with the upper-left grid, generate all possible variations. Take into consideration the clues on the board. Repeat for all 9 grids.
 3. 
+
+Build with:
+g++ -o sudoku main.cpp board.cpp threadpool.cpp -pthread 
+Run with:
+./sudoku

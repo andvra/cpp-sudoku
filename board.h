@@ -1,23 +1,22 @@
+#pragma once
 #include <string>
 #include <vector>
-#include <algorithm>
 #include <thread>
-#include <chrono>
 #include <iostream>
+#include <mutex>
+#include "threadpool.h"
 
 using namespace std;
 
-int noAvailableThreads = 8;
-vector<thread> threads;
-string solution;
-
 class Board
 {
+static string solution;
+static mutex mutexSolved;
     string board;
     vector<vector<string>> possibleGridFills;
-
+	ThreadPool* threadPool;
 public:
-    Board(string s);
+    Board(string s, ThreadPool* tp=0);
 
     ~Board();
 
@@ -39,7 +38,9 @@ public:
 
     static void PopGrid(const string &originalBoard, string &s, int row, int col);
 
-    static void BuildBoard(const string &originalBoard, string s, int row, int col, const vector<vector<string>> gridFills, int threadStartRow, int threadStartCol);
+    static void BuildBoard(const string &originalBoard, string s, int row, int col, const vector<vector<string>> gridFills, int threadID, ThreadPool *tp);
 
     void PrintSolution();
+    static void SetSolved(string sol);
+    string GetSolution();
 };
