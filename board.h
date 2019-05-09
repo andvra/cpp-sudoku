@@ -22,7 +22,7 @@ public:
 
     bool IsValid(string s, int row, int col);
 
-    string BoardStringToString(const string &data);
+    static string BoardStringToString(const string &data);
 
     string ToString();
 
