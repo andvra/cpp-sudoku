@@ -1,7 +1,6 @@
 #pragma once
 #include <string>
 #include <vector>
-#include <thread>
 #include <iostream>
 #include <mutex>
 #include "threadpool.h"
@@ -10,17 +9,18 @@ using namespace std;
 
 class Board
 {
-static string solution;
-static mutex mutexSolved;
+    string solution;
+    mutex mutexSolved;
     string board;
     vector<vector<string>> possibleGridFills;
-	ThreadPool* threadPool;
+    ThreadPool *threadPool;
+
 public:
-    Board(string s, ThreadPool* tp=0);
+    Board(string s, ThreadPool *tp = 0);
 
     ~Board();
 
-    static bool IsValid(string s, int row, int col);
+    bool IsValid(string s, int row, int col);
 
     string BoardStringToString(const string &data);
 
@@ -34,13 +34,7 @@ public:
 
     const string Data();
 
-    static void PushGrid(string &s, int row, int col, string grid);
-
-    static void PopGrid(const string &originalBoard, string &s, int row, int col);
-
-    static void BuildBoard(const string &originalBoard, string s, int row, int col, const vector<vector<string>> gridFills, int threadID, ThreadPool *tp);
-
-    void PrintSolution();
-    static void SetSolved(string sol);
+    void GenerateSolution();
+    void SetSolved(string sol);
     string GetSolution();
 };
