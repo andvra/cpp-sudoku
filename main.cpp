@@ -33,5 +33,5 @@ int main()
 	cout << "Sleep for 5s..\n";
 	this_thread::sleep_for(5s);
 	cout << "Done!\n";
-	return 0;
+	return 1;
 }
