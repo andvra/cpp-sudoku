@@ -30,7 +30,7 @@ Iter select_randomly(Iter start, Iter end)
 	// https://stackoverflow.com/a/16421677
 	static random_device rd;
 	static mt19937 gen(rd());
-	string board = select_randomly(start, end, gen);
+	return select_randomly(start, end, gen);
 }
 
 int main()
