@@ -8,10 +8,6 @@
 
 using namespace std;
 int maxNoThreads = 3;
-ostream &operator<<(ostream &os, Board &board)
-{
-	return os << board.ToString();
-}
 
 static void FindSolution(Board &board)
 {
@@ -32,9 +28,10 @@ int main()
 	string ret = board.GetSolution();
 	auto t_end = chrono::high_resolution_clock::now();
 	cout << std::chrono::duration<double>(t_end - t_start).count() << " ms\n";
-	cout << ret << "\n";
+	cout << "Solution:\n";
+	cout << Board::BoardStringToString(ret) << "\n";
 	cout << "Sleep for 5s..\n";
 	this_thread::sleep_for(5s);
 	cout << "Done!\n";
-	return 0;
+	return 1;
 }

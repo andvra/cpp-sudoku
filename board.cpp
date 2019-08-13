@@ -40,7 +40,6 @@ void BuildBoard(Board &board, const string &originalBoard, string s, int row, in
         {
             if (col == 2 && row == 2)
             {
-                string s = "";
                 board.SetSolved(s);
                 //solution=BoardStringToString(s.c_str());
                 return;
